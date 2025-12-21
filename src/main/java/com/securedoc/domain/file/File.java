@@ -22,6 +22,7 @@ public class File {
     private Long fileId;
 
     @Column(nullable = false)
+    // 파일 소유자의 id(User -> id entity)
     private Long userId;
 
     @Column(nullable = false, length = 255)

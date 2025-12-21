@@ -17,19 +17,11 @@ public class FilePermissionResponse {
     @Builder
     public static class Data {
         private Long shareId;
-        private UserInfo user; // 유저 번호
         private File file;
-        private ShareInfo share;
+        private SharedUserInfo sharedUser;
         private boolean isPinProtected;
         private LocalDateTime shareDate;
         private LocalDateTime expireDate;
-    }
-
-    @Getter
-    @Builder
-    public static class UserInfo {
-        private String userId;
-        private String username;
     }
 
     @Getter
@@ -41,7 +33,7 @@ public class FilePermissionResponse {
 
     @Getter
     @Builder
-    public static class ShareInfo {
+    public static class SharedUserInfo {
         private String userId;
         private String username;
     }

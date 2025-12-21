@@ -155,11 +155,11 @@ public class FileServiceImp1 implements FileService{
 
             // 공유 받은 사람 -> PIN 번호 체크
             Integer inputPin = request.getPin();
-            if (perm.getPinHash() != null) {
+            if (perm.getPin() != null) {
                 if (inputPin == null) {
                     throw new IllegalArgumentException("PIN 번호를 입력해주세요.");
                 }
-                if (!BCrypt.checkpw(inputPin.toString(), perm.getPinHash())) {
+                if (!BCrypt.checkpw(inputPin.toString(), perm.getPin())) {
                     throw new IllegalArgumentException("PIN 번호가 일치하지 않습니다.");
                 }
             }
