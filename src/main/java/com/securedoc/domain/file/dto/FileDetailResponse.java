@@ -2,49 +2,53 @@ package com.securedoc.domain.file.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
+import org.springframework.cglib.core.Local;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
+@Setter
 @Builder
-public class FileShareListResponse {
+public class FileDetailResponse {
 
     private boolean success;
     private Data data;
 
     @Getter
+    @Setter
     @Builder
     public static class Data {
-        private List<ShareList> files;
-        private Pagination pagination;
-    }
-
-    @Getter
-    @Builder
-    public static class ShareList {
         private Long fileId;
+        private String filename;
         private String originalFilename;
         private Long fileSize;
+        private String fileType;
         private String fileExtension;
         private Owner owner;
-        private LocalDateTime shareDate;
+        private List<Share> shareList;
+        private LocalDateTime createDate;
     }
 
     @Getter
+    @Setter
     @Builder
     public static class Owner {
-        private String userId;
+        private Long id;
         private String username;
     }
 
-
     @Getter
+    @Setter
     @Builder
-    public static class Pagination {
-        private int currentPage; // 현재 페이지
-        private int totalPage; // 전체 페이지
-        private Long totalItems; // 전체 파일
-        private int itemsPerPage; // 페이지 당 파일
+    public static class Share {
+        private Long shareId;
+        private String Id;
+        private String username;
+        private LocalDateTime shareDate;
+        private LocalDateTime expireDate;
+        private boolean isPinProtected;
     }
+
 }

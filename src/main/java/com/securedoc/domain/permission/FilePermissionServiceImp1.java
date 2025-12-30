@@ -58,7 +58,7 @@ public class FilePermissionServiceImp1 implements FilePermissionService{
 
         FilePermission permission = FilePermission.builder()
                 .fileId(sharedFile.getFileId())
-                .userId(sharedUser.getId())
+                .userId(sharedUser.getUserId())
                 .pin(pinHash)
                 .shareDate(LocalDateTime.now())
                 .expireDate(expireDate)
@@ -76,13 +76,13 @@ public class FilePermissionServiceImp1 implements FilePermissionService{
                 .originalFilename(sharedFile.getOriginalFilename())
                 .build();
 
-        // sharedUser 구현
+        // SharedUser 구현
         FilePermissionResponse.SharedUserInfo sharedUserInfo = FilePermissionResponse.SharedUserInfo.builder()
                 .userId(sharedUser.getUserId())
                 .username(sharedUser.getUsername())
                 .build();
 
-        // data 구현
+        // Data 구현
         FilePermissionResponse.Data data = FilePermissionResponse.Data.builder()
                 .shareId(permission.getShareId())
                 .file(fileInfo)

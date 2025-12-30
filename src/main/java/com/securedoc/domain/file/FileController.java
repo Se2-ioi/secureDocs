@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -144,4 +145,24 @@ public class FileController {
         }
     }
 
+    @GetMapping("/{fileId}")
+    public ResponseEntity<FileDetailResponse> getFileDetail(
+            @PathVariable Long fileId,
+            HttpServletRequest httpRequest
+    ) {
+        Long userId = Long.parseLong((String) httpRequest.getAttribute("userId"));
+        FileDetailResponse response = fileService.fileDetail(fileId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/trash")
+    public ResponseEntity<TrashFileResponse> getTrashList(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int  limit,
+            HttpServletRequest httpRequest
+    ) {
+        Long userId = Long.parseLong((String) httpRequest.getAttribute("userId"));
+        TrashFileResponse response = fileService.trashList(userId, page, limit);
+        return ResponseEntity.ok(response);
+    }
 }

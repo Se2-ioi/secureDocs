@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,11 +25,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.Permission;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -139,9 +139,12 @@ public class FileServiceImp1 implements FileService{
         // 다운로드 권한 - 소유자 확인
         if (!fileEntity.getUserId().equals(userId)) {
 
+            User currentUser = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
             // 다운로드 권한 - 공유 대상자 확인
             Optional<FilePermission> permission = filePermissionRepository
-                    .findByFileIdAndUserId(fileId, userId);
+                    .findByFileIdAndUserId(fileId, currentUser.getUserId());
 
             if (permission.isEmpty()) {
                 throw new IllegalArgumentException("다운로드 권한이 없습니다.");
@@ -154,7 +157,7 @@ public class FileServiceImp1 implements FileService{
             }
 
             // 공유 받은 사람 -> PIN 번호 체크
-            Integer inputPin = request.getPin();
+            String inputPin = request.getPin();
             if (perm.getPin() != null) {
                 if (inputPin == null) {
                     throw new IllegalArgumentException("PIN 번호를 입력해주세요.");
@@ -273,7 +276,10 @@ public class FileServiceImp1 implements FileService{
         Sort fileSort = Sort.by(direction, sort);
         Pageable pageable = PageRequest.of(page - 1, limit, fileSort);
 
-        Page<FilePermission> sharePage = filePermissionRepository.findByUserId(userId, pageable);
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        Page<FilePermission> sharePage = filePermissionRepository.findByUserId(currentUser.getUserId(), pageable);
 
         List<FileShareListResponse.ShareList> shareLists = sharePage.getContent().stream()
                 .map(share -> {
@@ -295,7 +301,7 @@ public class FileServiceImp1 implements FileService{
                     return FileShareListResponse.ShareList.builder()
                             .fileId(file.getFileId())
                             .originalFilename(file.getOriginalFilename())
-                            .filesize(file.getFileSize())
+                            .fileSize(file.getFileSize())
                             .fileExtension(file.getFileExtension())
                             .owner(FileShareListResponse.Owner.builder()
                                     .userId(owner.getUserId())
@@ -318,6 +324,104 @@ public class FileServiceImp1 implements FileService{
                 .success(true)
                 .data(FileShareListResponse.Data.builder()
                         .files(shareLists)
+                        .pagination(pagination)
+                        .build())
+                .build();
+    }
+
+    @Override
+    public FileDetailResponse fileDetail(Long fileId, Long userId) {
+
+        // 파일 조회
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new NotFoundException("FILE_NOT_FOUND", "파일을 찾을 수 없습니다."));
+
+        // 권한 확인
+        User owner = userRepository.findById(file.getUserId()).
+                orElseThrow(() -> new NotFoundException("USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
+        if(!file.getUserId().equals(userId)) {
+            throw new ForbiddenException("PERMISSION_DENIED", "조회 권한이 없습니다.");
+        }
+
+        // 공유 목록 조회
+        List<FilePermission> list = filePermissionRepository.findByFileId(file.getFileId());
+
+        // 상세 정보
+        FileDetailResponse.Owner ownerDto = FileDetailResponse.Owner.builder()
+                .id(owner.getId())
+                .username(owner.getUsername())
+                .build();
+
+        List<FileDetailResponse.Share> shareList = new ArrayList<>();
+        for (FilePermission p : list) {
+            User user = userRepository.findById(userId)
+                    .orElse(null);
+            if (user == null) continue;
+
+            shareList.add(FileDetailResponse.Share.builder()
+                    .shareId(p.getShareId())
+                    .Id(user.getUserId())
+                    .username(user.getUsername())
+                    .shareDate(p.getShareDate())
+                    .expireDate(p.getExpireDate())
+                    .isPinProtected(p.getPin() != null)
+                    .build());
+        }
+
+        FileDetailResponse.Data data = FileDetailResponse.Data.builder()
+                .fileId(file.getFileId())
+                .filename(file.getFilename())
+                .originalFilename(file.getOriginalFilename())
+                .fileSize(file.getFileSize())
+                .fileType(file.getFileType())
+                .fileExtension(file.getFileExtension())
+                .owner(ownerDto)
+                .shareList(shareList)
+                .createDate(file.getCreateDate())
+                .build();
+
+        return FileDetailResponse.builder()
+                .success(true)
+                .data(data)
+                .build();
+    }
+
+    @Override
+    // 휴지통 기능
+    public TrashFileResponse trashList(Long userId, int page, int limit) {
+
+        // 파라미터 검증
+        if(page < 1) {
+            throw new IllegalArgumentException("잘못된 페이지 번호입니다.");
+        }
+        if (limit > 10) {
+            limit = 10;
+        }
+
+        Pageable pageable = PageRequest.of(page - 1, limit);
+        Page<File> filepage = fileRepository.findByUserIdAndDeleteDateIsNotNullOrderByDeleteDateDesc(userId, pageable);
+
+        List<TrashFileResponse.myTrash> trashFiles = filepage.getContent().stream()
+                .map(file -> TrashFileResponse.myTrash.builder()
+                        .fileId(file.getFileId())
+                        .originalFilename((file.getOriginalFilename()))
+                        .fileSize(file.getFileSize())
+                        .fileExtension(file.getFileExtension())
+                        .deleteDate(file.getDeleteDate())
+                        .build())
+                .toList();
+
+        TrashFileResponse.Pagination pagination = TrashFileResponse.Pagination.builder()
+                .currentPage(page)
+                .totalPage(filepage.getTotalPages())
+                .totalItems(filepage.getTotalElements())
+                .itemsPerPage(limit)
+                .build();
+
+        return TrashFileResponse.builder()
+                .success(true)
+                .data(TrashFileResponse.Data.builder()
+                        .files(trashFiles)
                         .pagination(pagination)
                         .build())
                 .build();

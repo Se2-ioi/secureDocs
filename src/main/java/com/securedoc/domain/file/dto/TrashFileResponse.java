@@ -8,7 +8,7 @@ import java.util.List;
 
 @Getter
 @Builder
-public class FileShareListResponse {
+public class TrashFileResponse {
 
     private boolean success;
     private Data data;
@@ -16,28 +16,19 @@ public class FileShareListResponse {
     @Getter
     @Builder
     public static class Data {
-        private List<ShareList> files;
+        private List<myTrash> files; // 파일이 여러개 -> List
         private Pagination pagination;
     }
 
     @Getter
     @Builder
-    public static class ShareList {
+    public static class myTrash {
         private Long fileId;
         private String originalFilename;
         private Long fileSize;
         private String fileExtension;
-        private Owner owner;
-        private LocalDateTime shareDate;
+        private LocalDateTime deleteDate;
     }
-
-    @Getter
-    @Builder
-    public static class Owner {
-        private String userId;
-        private String username;
-    }
-
 
     @Getter
     @Builder

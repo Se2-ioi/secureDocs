@@ -14,4 +14,5 @@ public interface FileRepository extends JpaRepository<File, Long> {
     Optional<File> findByFileIdAndDeleteDateIsNull(Long fileId);
     Page<File> findByUserIdAndDeleteDateIsNull(Long currentId, Pageable pageable);
 
+    Page<File> findByUserIdAndDeleteDateIsNotNullOrderByDeleteDateDesc(Long userId, Pageable pageable);
 }

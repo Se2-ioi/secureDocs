@@ -1,4 +1,4 @@
-package com.securedoc.domain.permission;
+package com.securedoc.domain.link;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -6,33 +6,37 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "file_permission")
+@Table(name = "file_link")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class FilePermission {
+public class FileLink {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    private Long shareId;
+    private Long linkId;
 
     @Column(nullable = false)
     private Long fileId;
 
-    // 공유 대상자
     @Column(nullable = false)
-    private String userId;
+    private Long userId;
+
+    @Column(nullable = false, unique = true)
+    private String shareUuid;
 
     @Column(name = "pin_hash")
     private String pin;
 
     @Builder.Default
-    private LocalDateTime shareDate = LocalDateTime.now();
+    private LocalDateTime createDate = LocalDateTime.now();
 
     @Column(nullable = false)
     private LocalDateTime expireDate;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean isActive = true;
 }
