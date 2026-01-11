@@ -4,6 +4,7 @@ import com.securedoc.domain.file.dto.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.Response;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,12 +23,18 @@ public class FileController {
 
     @PostMapping(value = "/upload")
     public ResponseEntity<?> upload(
+
             @RequestParam("file") MultipartFile file,
             @RequestParam("description") String description,
             @RequestParam("metadata") String metadata,
             HttpServletRequest request) {
+        System.out.println("=== Upload 요청 받음 ===");
+        System.out.println("File: " + file);
+        System.out.println("Description: " + description);
         try {
+            System.out.println("userId 추출 시작");
             Long userId = Long.parseLong((String) request.getAttribute("userId"));
+            System.out.println("userId: " + userId);
 
             FileUploadRequest uploadRequest = new FileUploadRequest();
             uploadRequest.setFile(file);
@@ -43,8 +50,10 @@ public class FileController {
             error.put("message", e.getMessage());
             return ResponseEntity.status(400).body(error);
         } catch (Exception e) {
+            e.printStackTrace();
             Map<String, String> error = new HashMap<>();
             error.put("error_code", "INTERNAL_SERVER_ERROR");
+            error.put("message", e.getMessage());
             return ResponseEntity.status(500).body(error);
         }
     }
@@ -65,6 +74,7 @@ public class FileController {
         } catch (Exception e) {
             Map<String, String> error = new HashMap<>();
             error.put("error_code", "INTERNAL_SERVER_ERROR");
+            error.put("message", e.getMessage());
             return ResponseEntity.status(500).body(error);
         }
     }
@@ -120,7 +130,6 @@ public class FileController {
         }
     }
 
-    // To-Do 테스트 필요
     @GetMapping("/share")
     public ResponseEntity<?> shareList (
             @RequestParam(defaultValue = "1") int page,
@@ -163,6 +172,31 @@ public class FileController {
     ) {
         Long userId = Long.parseLong((String) httpRequest.getAttribute("userId"));
         TrashFileResponse response = fileService.trashList(userId, page, limit);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{fileId}/restore")
+    public ResponseEntity<?> restore(
+            @PathVariable Long fileId,
+            HttpServletRequest httpRequest
+    ) {
+        Long userId = Long.parseLong((String) httpRequest.getAttribute("userId"));
+        TrashRestoreResponse response = fileService.restoreFile(fileId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{fileId}/permanent")
+    public ResponseEntity<?> permanentDelete(
+            @PathVariable Long fileId,
+            HttpServletRequest httpRequest
+    ) {
+        Long userId = Long.parseLong((String) httpRequest.getAttribute("userId"));
+        fileService.permanentDelete(fileId, userId);
+
+        Map<String, Object> response = new HashMap<>(); // JSON 객체 생성
+        response.put("success", true);
+        response.put("message", "파일이 영구 삭제되었습니다.");
+
         return ResponseEntity.ok(response);
     }
 }

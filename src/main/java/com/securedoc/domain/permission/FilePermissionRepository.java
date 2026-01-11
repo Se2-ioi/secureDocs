@@ -14,4 +14,5 @@ public interface FilePermissionRepository extends JpaRepository<FilePermission, 
     Page<FilePermission> findByUserId(String userId, Pageable pageable);
 
     List<FilePermission> findByFileId(Long fileId);
+    void deleteByFileId(Long fileId);
 }

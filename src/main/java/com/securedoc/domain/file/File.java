@@ -1,16 +1,14 @@
 package com.securedoc.domain.file;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "files")
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -48,5 +46,10 @@ public class File {
     @PreRemove
     public void setDeleteDate() {
         this.deleteDate = LocalDateTime.now();
+    }
+
+    // 수동 설정 - 휴지통 복구용
+    public void updateDeleteDate(LocalDateTime deleteDate) {
+        this.deleteDate = deleteDate;
     }
 }

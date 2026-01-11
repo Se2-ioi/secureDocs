@@ -1,5 +1,6 @@
 package com.securedoc.domain.file;
 
+import com.securedoc.domain.exception.BadRequestExcetpion;
 import com.securedoc.domain.exception.ForbiddenException;
 import com.securedoc.domain.exception.NotFoundException;
 import com.securedoc.domain.file.dto.*;
@@ -426,4 +427,90 @@ public class FileServiceImp1 implements FileService{
                         .build())
                 .build();
     }
+
+    @Override
+    public void permanentDelete(Long fileId, Long userId) {
+        // 파일 조회
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new NotFoundException("FILE_NOT_FOUND", "파일을 찾을 수 없습니다."));
+        // 소유자 확인
+        if(!file.getUserId().equals(userId)) {
+            throw new ForbiddenException("PERMISSION_DENIED", "권한이 없는 사용자입니다.");
+        }
+        // 휴지통 파일 확인
+        if(file.getDeleteDate() == null) {
+            throw new BadRequestExcetpion("NOT_IN_TRASH", "삭제되지 않은 파일입니다.");
+        }
+
+        // DB 포함 삭제
+        deletePhysicalFile(file);
+        filePermissionRepository.deleteByFileId(fileId);
+        fileRepository.delete(file);
+    }
+
+    private void deletePhysicalFile(File file) {
+        String filePath = UPLOADPATH + "user_" + file.getUserId() + "/" + file.getFilename();
+        Path path = Paths.get(filePath);
+
+        try {
+            if(Files.exists(path)) {
+                Files.delete(path);
+                System.out.println("파일 삭제 완료 : " + filePath);
+            } else {
+                System.out.println("이미 삭제됨 : " + filePath);
+            }
+        } catch (IOException e) {
+            // 삭제 실패해도 DB는 삭제
+            System.err.println("파일 삭제 실패 + filePath");
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public TrashRestoreResponse restoreFile(Long fileId, Long userId) {
+        // 파일 조회
+        File file = fileRepository.findByFileIdAndDeleteDateIsNotNull(fileId)
+                .orElseThrow(() -> new NotFoundException("FILE_NOT_FOUND", "파일을 찾을 수 없습니다."));
+        // 이미 복구된 파일 체크
+        if(file.getDeleteDate() == null) {
+            throw new BadRequestExcetpion("NOT_DELETED", "이미 복구된 파일입니다.");
+        }
+        // 소유자 권한 확인
+        if(!file.getUserId().equals(userId)) {
+            throw new ForbiddenException("Permission_DENIED", "권한이 없는 사용자입니다.");
+        }
+        // deleteDate = null로 설정 (복구)
+        file.updateDeleteDate(null);
+        fileRepository.save(file);
+
+        TrashRestoreResponse.Data data = TrashRestoreResponse.Data.builder()
+                .fileId(file.getFileId())
+                .originalFilename(file.getOriginalFilename())
+                .fileSize(file.getFileSize())
+                .fileExtension(file.getFileExtension())
+                .createDate(file.getCreateDate())
+                .build();
+
+        return TrashRestoreResponse.builder()
+                .success(true)
+                .message("파일이 복구되었습니다.")
+                .data(data)
+                .build();
+    }
+
+    @Override
+    public void cleanUpTrashFile() {
+        LocalDateTime thirtyDays = LocalDateTime.now().minusDays(30);
+        List<File> oldFile = fileRepository.findByDeleteDateIsNotNullAndDeleteDateBefore(thirtyDays);
+
+        for(File file : oldFile) {
+            // 실제 파일 시스템 삭제
+            deletePhysicalFile(file);
+            // DB 삭제
+            filePermissionRepository.deleteByFileId(file.getFileId());
+            fileRepository.delete(file);
+        }
+    }
 }
+
+
